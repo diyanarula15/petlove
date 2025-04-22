@@ -1,0 +1,43 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.example.petlove.app-mergeDebugResources-12:/values-mk/values-mk.xml",
+            "map": [
+                {
+                    "source": "/Users/ravinarula/.gradle/caches/8.9/transforms/954697ef73fdd0ce439aa094c630f20b/transformed/jetified-play-services-basement-18.4.0/res/values-mk/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "132",
+                        "endOffsets": "327"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "136",
+                        "endOffsets": "187"
+                    }
+                },
+                {
+                    "source": "/Users/ravinarula/.gradle/caches/8.9/transforms/cb7d852eeca73014d78254616c0cf88c/transformed/core-1.9.0/res/values-mk/values-mk.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "192",
+                        "endColumns": "100",
+                        "endOffsets": "288"
+                    }
+                }
+            ]
+        }
+    ]
+}

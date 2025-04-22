@@ -1,0 +1,28 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// Define flutterSdkPath (keep this part as is)
+def flutterSdkPath = {
+    def properties = new Properties()
+    file("local.properties").withInputStream { properties.load(it) }
+    def path = properties.getProperty("flutter.sdk")
+    assert path != null : "flutter.sdk not set in local.properties"
+    return path
+}()
+
+// Include the Flutter tools Gradle build (keep this)
+includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+// REMOVE THIS LINE:
+// apply from: "$flutterSdkPath/packages/flutter_tools/gradle/flutter.gradle"  <-- DELETE THIS
+
+// Include your app module (keep this)
+include ':app'
+
+// Note: The settings for gradle.wrapper.properties are usually not in settings.gradle
+// They belong in gradle/wrapper/gradle-wrapper.properties, which you provided separately and looks correct.

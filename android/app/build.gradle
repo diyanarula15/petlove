@@ -1,0 +1,102 @@
+//android/app/build.gradle
+
+// --- START: Fix for "Imperative apply script method..." and related compileSdkVersion error ---
+// Use the declarative plugins block at the very top instead of 'apply plugin' and 'apply from'
+plugins {
+    id "com.android.application" // Applies the Android Application plugin
+    id "kotlin-android"         // Applies the Kotlin plugin
+    // Applies the Flutter Gradle plugin using the modern method
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services" // Applies the Google Services plugin
+}
+
+// --- REMOVE the following lines that were previously here: ---
+// apply plugin: 'com.android.application'
+// apply plugin: 'kotlin-android'
+// apply plugin: 'com.google.gms.google-services'
+// apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+// --- END: Fix for "Imperative apply script method..." ---
+
+
+// --- This block is still needed to read flutter.sdk path from local.properties ---
+// Keep this block as it is, it was correctly placed after the first fix.
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
+// This definition is still needed for the local check, even though the plugin is applied differently
+def flutterRoot = localProperties.getProperty("flutter.sdk")
+if (flutterRoot == null) {
+    throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+// --- End local.properties reading block ---
+
+
+// These definitions are still needed, they read values from local.properties for defaultConfig
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")?.toInteger() ?: 1
+def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
+def flutterMinSdkVersion = localProperties.getProperty("flutter.minSdkVersion")?.toInteger() ?: 21
+
+
+android {
+    // This block contains compileSdkVersion and will now be processed correctly
+    compileSdkVersion 34
+    namespace "com.example.petlove" // Make sure this is correct for your app
+
+    defaultConfig {
+        applicationId "com.example.petlove" // Make sure this is correct for your app
+        minSdkVersion flutterMinSdkVersion
+        targetSdkVersion 34
+        versionCode flutterVersionCode
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+    
+    ndkVersion localProperties.getProperty("ndk.version")
+
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17 // Ensure this matches your Java setup
+        targetCompatibility JavaVersion.VERSION_17 // Ensure this matches your Java setup
+    }
+
+    kotlinOptions {
+        jvmTarget = "17" // Ensure this matches your Kotlin setup
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    signingConfigs {
+        debug {
+            // Configure as needed
+        }
+    }
+
+    buildTypes {
+        release {
+            // Use a proper release signingConfig for production
+            signingConfig signingConfigs.debug // !!! CHANGE THIS FOR PRODUCTION !!!
+            // isMinifyEnabled true
+            // isShrinkResources true
+            // proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+// The flutter block is still needed for the Flutter plugin to know the source location
+flutter {
+    source '../..'
+}
+
+// Dependencies block remains the same
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version" // Consider updating if using newer features/Kotlin versions
+    implementation platform('com.google.firebase:firebase-bom:33.1.1')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    // Add other dependencies here
+}
