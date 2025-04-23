@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:petlove/models/User_model.dart'; // Correct source for UserModel
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:petlove/screens/help_request_display_user.dart'; // Assuming RequestDetailWithoutHelper is correct
 // import 'package:maps_launcher/maps_launcher.dart'; // REMOVED
 import 'package:url_launcher/url_launcher.dart'; // ADDED
+import 'package:petlove/screens/ai_first_aid_chat.dart'; // Import the AI chat screen
 
 
 class HelperAssignedRequests extends StatefulWidget {
@@ -35,7 +38,7 @@ class _HelperAssignedRequestsState extends State<HelperAssignedRequests> {
     // This format often opens in the native app if installed, or falls back to the web.
     // Corrected the URL format string
     final String googleMapsUrl =
-        "http://maps.google.com/?q=${geoPoint.latitude},${geoPoint.longitude}";
+        "http://maps.google.com/?q=${geoPoint.latitude},${geoPoint.longitude}"; // Corrected URL format
 
     // Parse the string into a Uri object
     final Uri mapUri = Uri.parse(googleMapsUrl);
@@ -85,134 +88,168 @@ class _HelperAssignedRequestsState extends State<HelperAssignedRequests> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _requestStream,
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-          if (snapshot.hasError) {
-            // Provide more specific error feedback if possible
-            print('StreamBuilder Error: ${snapshot.error}');
-            return const Center(child: Text('Something went wrong. Please try again.'));
-          }
+      // Use a Stack to position the content and the floating action button
+      body: Stack(
+        children: [
+          // Main content of the screen (StreamBuilder and ListView)
+          StreamBuilder<QuerySnapshot>(
+            stream: _requestStream,
+            builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasError) {
+                // Provide more specific error feedback if possible
+                print('StreamBuilder Error: ${snapshot.error}');
+                return const Center(child: Text('Something went wrong. Please try again.'));
+              }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
 
-          // Check if data exists AND is not empty
-          if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-            return ListView(
-              children: snapshot.data!.docs.map((DocumentSnapshot document) {
-                // Use try-catch for safer data access
-                Map<String, dynamic> data;
-                try {
-                   data = document.data()! as Map<String, dynamic>;
-                } catch (e) {
-                   print("Error casting document data: ${document.id} - $e");
-                   return const SizedBox.shrink(); // Return an empty widget if data is bad
-                }
+              // Check if data exists AND is not empty
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return Padding( // Add padding to the content to avoid FAB overlap
+                  padding: const EdgeInsets.only(bottom: 80.0), // Adjust padding as needed
+                  child: ListView(
+                    children: snapshot.data!.docs.map((DocumentSnapshot document) {
+                      // Use try-catch for safer data access
+                      Map<String, dynamic> data;
+                      try {
+                         data = document.data()! as Map<String, dynamic>;
+                      } catch (e) {
+                         print("Error casting document data: ${document.id} - $e");
+                         return const SizedBox.shrink(); // Return an empty widget if data is bad
+                      }
 
 
-                // Safely access nested GeoPoint data
-                GeoPoint? geoPoint;
-                if (data['Location'] != null && data['Location'] is Map && data['Location']['geopoint'] != null && data['Location']['geopoint'] is GeoPoint) {
-                    geoPoint = data['Location']['geopoint'] as GeoPoint;
-                } else {
-                    print("Warning: GeoPoint data missing or invalid for document ${document.id}");
-                }
+                      // Safely access nested GeoPoint data
+                      GeoPoint? geoPoint;
+                      // Check if 'Location' exists, is a Map, contains 'geopoint', and 'geopoint' is a GeoPoint
+                      if (data.containsKey('Location') && data['Location'] is Map && data['Location'].containsKey('geopoint') && data['Location']['geopoint'] is GeoPoint) {
+                          geoPoint = data['Location']['geopoint'] as GeoPoint;
+                      } else {
+                          print("Warning: GeoPoint data missing or invalid for document ${document.id}");
+                      }
 
-                return Padding(
-                  padding: const EdgeInsets.all(8.0), // Adjusted padding
-                  child: Card(
-                    elevation: 3, // Added slight elevation for better UI
-                    child: Column(
-                      children: <Widget>[
-                        ListTile(
-                          leading: CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Colors.grey[200], // Placeholder color
-                            backgroundImage: data['ImageURL'] != null && (data['ImageURL'] as String).isNotEmpty // Check if URL is not empty string
-                                ? CachedNetworkImageProvider(data['ImageURL'])
-                                : null, // Handle null or empty ImageURL
-                            child: (data['ImageURL'] == null || (data['ImageURL'] as String).isEmpty)
-                                ? const Icon(Icons.pets, color: Colors.grey) // Placeholder Icon
-                                : null,
-                          ),
-                          title: Text(
-                            data['Animal'] ?? 'Unknown Animal', // Handle null Animal name
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 4, 50, 88),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Optional: Add subtitle for more info if needed
-                          subtitle: Text(data['Description'] ?? 'No description', // Display description as subtitle
-                              style: const TextStyle(fontSize: 14)),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: <Widget>[
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: geoPoint != null ? Theme.of(context).primaryColor : Colors.grey, // Disable visually if no location
-                                  foregroundColor: Colors.white, // Ensure text color is white
+
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0), // Adjusted padding
+                        child: Card(
+                          elevation: 3, // Added slight elevation for better UI
+                          child: Column(
+                            children: <Widget>[
+                              ListTile(
+                                leading: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.grey[200], // Placeholder color
+                                  backgroundImage: data['ImageURL'] != null && (data['ImageURL'] as String).isNotEmpty // Check if URL is not empty string
+                                      ? CachedNetworkImageProvider(data['ImageURL'])
+                                      : null, // Handle null or empty ImageURL
+                                  child: (data['ImageURL'] == null || (data['ImageURL'] as String).isEmpty)
+                                      ? const Icon(Icons.pets, color: Colors.grey) // Placeholder Icon
+                                      : null,
                                 ),
-                                child: const Text(
-                                  'LOCATION',
-                                  style: TextStyle(fontSize: 14), // Ensure text is visible
+                                title: Text(
+                                  data['Animal'] ?? 'Unknown Animal', // Handle null Animal name
+                                  style: const TextStyle(
+                                    color: Color.fromARGB(255, 4, 50, 88),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                onPressed: geoPoint != null
-                                    ? () {
-                                        // Call the helper function
-                                        _launchMap(geoPoint!, context);
-                                      }
-                                    : null, // Disable button if geoPoint is null
+                                // Optional: Add subtitle for more info if needed
+                                subtitle: Text(data['Description'] ?? 'No description', // Display description as subtitle
+                                    style: const TextStyle(fontSize: 14)),
                               ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 16.0), // Adjusted padding
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  foregroundColor: Colors.white, // Ensure text color is white
-                                ),
-                                child: const Text(
-                                  'DETAILS',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          RequestDetailWithoutHelper(
-                                        document: data, // Pass the document data
-                                        // Consider passing document.id if RequestDetailWithoutHelper needs to interact with the doc
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: geoPoint != null ? Theme.of(context).primaryColor : Colors.grey, // Disable visually if no location
+                                        foregroundColor: Colors.white, // Ensure text color is white
                                       ),
+                                      child: const Text(
+                                        'LOCATION',
+                                        style: TextStyle(fontSize: 14), // Ensure text is visible
+                                      ),
+                                      onPressed: geoPoint != null
+                                          ? () {
+                                              // Call the helper function
+                                              _launchMap(geoPoint!, context);
+                                            }
+                                          : null, // Disable button if geoPoint is null
                                     ),
-                                  );
-                                },
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, right: 16.0), // Adjusted padding
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        foregroundColor: Colors.white, // Ensure text color is white
+                                      ),
+                                      child: const Text(
+                                        'DETAILS',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                RequestDetailWithoutHelper(
+                                              document: data, // Pass the document data
+                                              // Consider passing document.id if RequestDetailWithoutHelper needs to interact with the doc
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
                 );
-              }).toList(),
-            );
-          } else {
-            // Handle case where there are no documents specifically
-            return const Center(
-              child: Text("No assigned requests found."),
-            );
-          }
-        },
+              } else {
+                // Handle case where there are no documents specifically
+                return const Center(
+                  child: Text("No assigned requests found."),
+                );
+              }
+            },
+          ),
+
+          // Positioned Floating Action Button for the AI Chat Bot
+          Positioned(
+            bottom: 16.0, // Adjust position as needed
+            right: 16.0, // Adjust position as needed
+            child: FloatingActionButton(
+              heroTag: 'aiChatFabHelper', // Unique tag for this FAB
+              onPressed: () {
+                // Navigate to the AI First Aid Chat Screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AiFirstAidChatScreen(),
+                  ),
+                );
+              },
+              tooltip: 'Pet First Aid Bot',
+              backgroundColor: const Color.fromARGB(255, 4, 50, 88), // Customize color
+              child: const Icon(Icons.chat_bubble_outline, color: Colors.white), // Chat icon
+            ),
+          ),
+        ],
       ),
+       // Set floatingActionButtonLocation to null when using Stack for positioning
+       floatingActionButtonLocation: null,
     );
   }
 }

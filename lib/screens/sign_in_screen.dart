@@ -40,14 +40,14 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'PetCare',
+                      'ResQpet',
                       style: TextStyle(
                         color: Color.fromARGB(255, 4, 50, 88),
                         fontSize: 40,
                       ),
                     ),
                     const Text(
-                      'Authentication',
+                      'Sign In',
                       style: TextStyle(
                         color: Color.fromARGB(255, 66, 152, 173),
                         fontSize: 40,
