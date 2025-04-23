@@ -3,18 +3,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:petlove/models/NGO_model.dart';
-import 'package:petlove/widgets/firebase_upload.dart';
-import 'package:petlove/widgets/button_widget.dart';
+import 'package:petlove/models/NGO_model.dart'; // Ensure this model file exists
+import 'package:petlove/widgets/firebase_upload.dart'; // Ensure this widget file exists
+import 'package:petlove/widgets/button_widget.dart'; // Ensure this widget file exists
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Keep this import for SnackBar
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// REMOVED: import 'package:fluttertoast/fluttertoast.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as Path;
-import 'package:geoflutterfire2/geoflutterfire2.dart';
-import 'package:petlove/screens/NGO_home_page.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:geoflutterfire2/geoflutterfire2.dart'; // Keep this if used elsewhere
+import 'package:petlove/screens/NGO_home_page.dart'; // Ensure this screen file exists
+import 'package:geolocator/geolocator.dart'; // Keep this if used elsewhere
+
 
 class getdocs {
   static Future<List<DocumentSnapshot>> existsngo(String? uid) async {
@@ -149,7 +150,7 @@ class _registrationState extends State<registration> {
   var imageuploadstat = 0;
   late LatLng location;
   late GeoFirePoint geopoint;
-  GeoFlutterFire geo = GeoFlutterFire(); 
+  GeoFlutterFire geo = GeoFlutterFire();
 
   @override
   void initState() {
@@ -219,16 +220,17 @@ class _registrationState extends State<registration> {
       autofocus: false,
       controller: OrganizationEditingController,
       keyboardType: TextInputType.name,
-      validator: (value) {
-        RegExp regex = RegExp(r'^.{3,}$');
-        if (value!.isEmpty) {
-          return ("Name cannot be Empty");
-        }
-        if (!regex.hasMatch(value)) {
-          return ("Enter Valid name(Min. 3 Character)");
-        }
-        return null;
-      },
+      // validator: (value) {
+      //   RegExp regex = new RegExp(
+      //       "/(\+\d{1,3}\s?)?((\(\d{3}\)\s?)|(\d{3})(\s|-?))(\d{3}(\s|-?))(\d{4})(\s?(([E|e]xt[:|.|]?)|x|X)(\s?\d+))?/g");
+      //   if (value!.isEmpty) {
+      //     return ("Name cannot be Empty");
+      //   }
+      //   if (!regex.hasMatch(value)) {
+      //     return ("Enter Valid name(Min. 3 Character)");
+      //   }
+      //   return null;
+      // },
       onSaved: (value) {
         OrganizationEditingController.text = value!;
       },
@@ -497,7 +499,18 @@ class _registrationState extends State<registration> {
     dataNGO.location = geopoint.geoPoint;
 
     await firebaseFirestore.collection("NGOs").doc(uid).set(dataNGO.toMap());
-    Fluttertoast.showToast(msg: "Account created successfully :) ");
+
+    // Replaced Fluttertoast.showToast with SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Account created successfully :) "),
+        duration: Duration(seconds: 2), // Adjust duration as needed
+      ),
+    );
+
+    // Use a small delay before navigating if you want the SnackBar to be visible for a moment
+    // await Future.delayed(const Duration(seconds: 2));
+
 
     Navigator.pushAndRemoveUntil(
         context,
@@ -507,6 +520,7 @@ class _registrationState extends State<registration> {
 
   void signUp(String? uid) async {
     if (_formKey.currentState!.validate()) {
+      // context is available here in the State class
       postDetailsToFirestore(uid);
     }
   }

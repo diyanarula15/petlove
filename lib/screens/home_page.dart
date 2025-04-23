@@ -6,7 +6,7 @@ import 'package:petlove/screens/register_NGO.dart';
 import 'package:petlove/screens/join_NGO.dart';
 import 'package:petlove/screens/help_request_display_user.dart';
 import 'package:petlove/screens/update_user_profile.dart';
-import 'package:petlove/screens/helper_dashboard.dart';
+import 'package:petlove/screens/helper_dashboard.dart' hide UserModel;
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key, required UserModel user})

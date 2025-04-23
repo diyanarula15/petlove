@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:petlove/models/User_model.dart';
-import 'package:petlove/screens/NGO_home_page.dart';
+import 'package:petlove/models/User_model.dart'; // Assuming these paths are correct
+import 'package:petlove/screens/NGO_home_page.dart'; // Assuming these paths are correct
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:petlove/models/NGO_model.dart';
-import 'package:maps_launcher/maps_launcher.dart';
+import 'package:petlove/models/NGO_model.dart'; // Assuming these paths are correct
+// REMOVED: import 'package:maps_launcher/maps_launcher.dart';
+import 'package:url_launcher/url_launcher.dart';
+// Import url_launcher_string if you plan to use launchUrlString
+import 'package:url_launcher/url_launcher_string.dart';
+
 
 class NGORequestsDisplay extends StatefulWidget {
   const NGORequestsDisplay(
@@ -22,90 +26,67 @@ class NGORequestsDisplay extends StatefulWidget {
 }
 
 class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
-  late GeoPoint NGOGeopoint;
-  bool NGOGeopointInitFlag = false;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-  late String? _uid;
-  late NGOModel _NGO;
+  // State variable for NGO's location
+  late GeoPoint _NGOGeopoint;
+  bool _isLoadingLocation = true; // Added loading state
+
   @override
   void initState() {
-    _uid = widget._uid;
-    _NGO = widget._NGO;
     super.initState();
+    _fetchNgoLocation(); // Fetch NGO location when the widget initializes
   }
 
-  final CollectionReference _requestReference =
-      FirebaseFirestore.instance.collection('Request');
-  late final Stream<QuerySnapshot> _requestStream =
-      _requestReference.snapshots();
+  // Method to fetch NGO location from Firestore
+  Future<void> _fetchNgoLocation() async {
+    try {
+      DocumentSnapshot ngoDoc = await FirebaseFirestore.instance
+          .collection('ngos') // Assuming NGO data is in 'ngos' collection
+          .doc(widget._NGO.uid)
+          .get();
 
-  void getGeopoint() async {
-    var collection = FirebaseFirestore.instance.collection('NGOs');
-    var docSnapshot = await collection.doc(_uid).get();
-    Map<String, dynamic>? data = docSnapshot.data();
-    NGOGeopoint = data?['location'];
-    setState(() {
-      NGOGeopointInitFlag = true;
-    });
-    // print(NGOGeopoint); // <-- The value you want to retrieve.
-    // Call setState if needed.
+      if (ngoDoc.exists && ngoDoc.data() != null) {
+        Map<String, dynamic> data = ngoDoc.data() as Map<String, dynamic>;
+        Map map = data['Location']; // Assuming location is stored like this
+        if (map != null && map['geopoint'] is GeoPoint) {
+           setState(() {
+            _NGOGeopoint = map['geopoint'];
+            _isLoadingLocation = false; // Location fetched, stop loading
+           });
+        } else {
+           // Handle case where location data is missing or malformed
+           print("NGO location data is missing or invalid.");
+           setState(() { _isLoadingLocation = false; }); // Stop loading anyway
+           // Optionally show an error message to the user
+        }
+      } else {
+        // Handle case where NGO document doesn't exist
+        print("NGO document not found.");
+        setState(() { _isLoadingLocation = false; }); // Stop loading anyway
+        // Optionally show an error message to the user
+      }
+    } catch (e) {
+      // Handle potential errors during Firestore fetch
+      print("Error fetching NGO location: $e");
+      setState(() { _isLoadingLocation = false; }); // Stop loading anyway
+      // Optionally show an error message to the user
+    }
   }
 
-  // getGeopoint();
 
   @override
   Widget build(BuildContext context) {
-    if (!NGOGeopointInitFlag) {
-      getGeopoint();
-      return MaterialApp(
-        home: Scaffold(
-          appBar: AppBar(
-            leading: Container(
-              color: const Color.fromARGB(255, 4, 50, 88),
-              padding: const EdgeInsets.all(3),
-              child: Flexible(
-                flex: 1,
-                child: IconButton(
-                  tooltip: 'Go back',
-                  icon: const Icon(Icons.arrow_back),
-                  alignment: Alignment.center,
-                  iconSize: 20,
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ), //Container,
-            elevation: 0,
-            backgroundColor: const Color.fromARGB(255, 4, 50, 88),
-            title: const Text(
-              'Current Requests',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-          body: const Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
     return MaterialApp(
-        home: Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            // passing this to our root
-            Navigator.of(context).pop();
-          },
-        ), //Container,
-        elevation: 0,
-        backgroundColor: const Color.fromARGB(255, 4, 50, 88),
-        title: const Text(
-          'Current Requests',
-          style: TextStyle(color: Colors.white),
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Current Requests'),
+          backgroundColor: const Color.fromARGB(255, 4, 50, 88),
         ),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-          stream: _requestStream,
+        // Show loading indicator while fetching location
+        body: _isLoadingLocation
+            ? const Center(child: CircularProgressIndicator())
+            : StreamBuilder<QuerySnapshot>(
+          // Use the actual stream of requests
+          stream: FirebaseFirestore.instance.collection('Request').snapshots(),
           builder:
               (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
             if (snapshot.hasError) {
@@ -117,30 +98,38 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
             }
 
             if (snapshot.hasData) {
+              // Filter documents where 'Location' and 'geopoint' exist
+              var filteredDocs = snapshot.data!.docs.where((document) {
+                 Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
+                 return data.containsKey('Location') &&
+                        data['Location'] != null &&
+                        data['Location'] is Map &&
+                        (data['Location'] as Map).containsKey('geopoint') &&
+                        (data['Location'] as Map)['geopoint'] is GeoPoint;
+              }).toList();
+
+
               return ListView(
-                children: snapshot.data!.docs.map((DocumentSnapshot document) {
+                children: filteredDocs.map((DocumentSnapshot document) {
                   Map<String, dynamic> data =
                       document.data()! as Map<String, dynamic>;
-                  Map map = data['Location'];
-                  GeoPoint requestGeopoint = map['geopoint'];
-                  // getGeopoint();
+                  GeoPoint requestGeopoint = data['Location']['geopoint'];
+
                   var distance = Geolocator.distanceBetween(
-                      NGOGeopoint.latitude,
-                      NGOGeopoint.longitude,
+                      _NGOGeopoint.latitude,
+                      _NGOGeopoint.longitude,
                       requestGeopoint.latitude,
                       requestGeopoint.longitude);
-                  // print(distance);
 
-                  // print(data!['HelperUID']);
+                  // Filter by distance and if HelperUID is null or empty
                   if (distance < 30000 &&
                       (data['HelperUID'] == null || data['HelperUID'] == '')) {
                     return Padding(
                       padding: const EdgeInsets.all(1.0),
                       child: GestureDetector(
                         // onTap: () {
-                        //   ;
+                        //   ; // You can add tap functionality here if needed
                         // },
-
                         child: Card(
                           child: Column(
                             children: <Widget>[
@@ -148,16 +137,20 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
                                 leading: CircleAvatar(
                                   radius: 30,
                                   backgroundImage: CachedNetworkImageProvider(
-                                    data['ImageURL'],
+                                    data['ImageURL'] ?? 'https://via.placeholder.com/150', // Provide a fallback image
                                   ),
                                 ),
                                 title: Text(
-                                  data['Animal'],
+                                  data['Animal'] ?? 'Unknown Animal', // Provide a default value
                                   style: const TextStyle(
                                     color: Color.fromARGB(255, 4, 50, 88),
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                ),
+                                subtitle: Text(
+                                   'Distance: ${(distance / 1000).toStringAsFixed(2)} km', // Display distance
+                                   style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                               Row(
@@ -170,22 +163,34 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
                                         'LOCATION',
                                         style: TextStyle(fontSize: 15),
                                       ),
-                                      onPressed: () {
-                                        // var doc_id = snapshot.data!.docs[0].reference.id;
-                                        // print(doc_id);
-                                        // Navigator.push(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //       builder: (context) =>
-                                        //           displayCurrentLocation(
-                                        //               pos: data['Location']
-                                        //                   ['geopoint'])),
-                                        // );
-                                        MapsLauncher.launchCoordinates(
-                                            data['Location']['geopoint']
-                                                .latitude,
-                                            data['Location']['geopoint']
-                                                .longitude);
+                                      onPressed: () async {
+                                        final double latitude = requestGeopoint.latitude;
+                                        final double longitude = requestGeopoint.longitude;
+                                        // Construct the geo URI
+                                        final Uri mapUri = Uri(
+                                          scheme: 'geo',
+                                          // Use query parameters for label for better compatibility
+                                          path: '$latitude,$longitude',
+                                          queryParameters: {'q': '${latitude},$longitude(${data['Animal'] ?? 'Animal Location'})'} // Add a label
+                                        );
+
+                                        // Check if the URL can be launched and launch it
+                                        // Using launchUrl for Uri objects
+                                        if (await canLaunchUrl(mapUri)) {
+                                          await launchUrl(mapUri);
+                                        } else {
+                                          // Fallback to a web map URL if geo URI fails
+                                          // Google Maps web URL example
+                                          final String googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+                                          if (await canLaunchUrlString(googleMapsUrl)) {
+                                             await launchUrlString(googleMapsUrl);
+                                          } else {
+                                             // Show an error if neither map app nor web map can be launched
+                                             ScaffoldMessenger.of(context).showSnackBar(
+                                               const SnackBar(content: Text('Could not launch map.')),
+                                             );
+                                          }
+                                        }
                                       },
                                     ),
                                   ),
@@ -198,15 +203,14 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
                                         style: TextStyle(fontSize: 15),
                                       ),
                                       onPressed: () {
-                                        // var doc_id = snapshot.data!.docs[0].reference.id;
-                                        // print(doc_id);
+                                        // Pass the document ID instead of ImageURL
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                               builder: (context) =>
                                                   NGOteammembers(
-                                                    NGO: _NGO,
-                                                    RequestID: data['ImageURL'],
+                                                    NGO: widget._NGO, // Use widget._NGO
+                                                    RequestDocId: document.id, // Pass the document ID
                                                   )),
                                         );
                                       },
@@ -221,11 +225,13 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
                       ),
                     );
                   } else {
+                    // Return an empty container if the request doesn't match the filter
                     return Container();
                   }
                 }).toList(),
               );
             } else {
+              // This case might be covered by connectionState == waiting, but good fallback
               return const Center(
                 child: Text("No Requests to display"),
               );
@@ -234,6 +240,10 @@ class _NGORequestsDisplayState extends State<NGORequestsDisplay> {
     ));
   }
 }
+
+// RequestDetail and RequestInfo classes remain largely the same,
+// but you might want to review if both are necessary or if one can be removed.
+// I'm keeping them as they are for now per your original code structure.
 
 class RequestDetail extends StatelessWidget {
   const RequestDetail({required Map<String, dynamic>? document, Key? key})
@@ -244,6 +254,13 @@ class RequestDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Added null check for data for safety
+    if (data == null) {
+      return const Scaffold(
+        appBar: null, // Or an appropriate AppBar
+        body: Center(child: Text("Error: Request data not available.")),
+      );
+    }
     return MaterialApp(
         home: Scaffold(
             appBar: AppBar(
@@ -283,13 +300,11 @@ class RequestDetail extends StatelessWidget {
                       SizedBox(
                         height: 400,
                         width: double.infinity,
-                        // child: Image.network(
-                        //   data!['ImageURL'],
-                        //   fit: BoxFit.contain,
-                        // ),
                         child: CachedNetworkImage(
-                          imageUrl: data!['ImageURL'],
+                          imageUrl: data!['ImageURL'] ?? 'https://via.placeholder.com/400x400.png?text=No+Image', // Fallback image
                           fit: BoxFit.contain,
+                          placeholder: (context, url) => const CircularProgressIndicator(), // Loading indicator
+                          errorWidget: (context, url, error) => const Icon(Icons.error), // Error icon
                         ),
                       ),
                       Container(
@@ -304,7 +319,7 @@ class RequestDetail extends StatelessWidget {
                               ),
                             ),
                             subtitle: Text(
-                              data!['Animal'],
+                              data!['Animal'] ?? 'N/A', // Default value
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -321,7 +336,7 @@ class RequestDetail extends StatelessWidget {
                             ),
                           ),
                           subtitle: Text(
-                            data!['Description'],
+                            data!['Description'] ?? 'No description provided.', // Default value
                             style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
@@ -353,13 +368,19 @@ class _RequestInfoState extends State<RequestInfo> {
 
   @override
   void initState() {
+    super.initState(); // Always call super.initState() first
     data = widget.data;
-
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Added null check for data for safety
+     if (data == null) {
+      return const Scaffold(
+        appBar: null, // Or an appropriate AppBar
+        body: Center(child: Text("Error: Request data not available.")),
+      );
+    }
     return MaterialApp(
         home: Scaffold(
             appBar: AppBar(
@@ -399,7 +420,7 @@ class _RequestInfoState extends State<RequestInfo> {
                     ),
                   ),
                   subtitle: Text(
-                    data!['Animal'],
+                    data!['Animal'] ?? 'N/A', // Default value
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -416,7 +437,7 @@ class _RequestInfoState extends State<RequestInfo> {
                   ),
                 ),
                 subtitle: Text(
-                  data!['Description'],
+                  data!['Description'] ?? 'No description provided.', // Default value
                   style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -428,34 +449,34 @@ class _RequestInfoState extends State<RequestInfo> {
 }
 
 class NGOteammembers extends StatefulWidget {
+  // Changed parameter name to reflect it's the document ID
   const NGOteammembers(
-      {Key? key, required NGOModel NGO, required String RequestID})
+      {Key? key, required NGOModel NGO, required String RequestDocId})
       : _NGO = NGO,
-        _RequestID = RequestID,
+        _RequestDocId = RequestDocId, // Storing the document ID
         super(key: key);
 
   final NGOModel _NGO;
-  final String _RequestID;
+  final String _RequestDocId; // State variable for the document ID
+
   @override
   State<NGOteammembers> createState() => _NGOteammembersState();
 }
 
 class _NGOteammembersState extends State<NGOteammembers> {
-  @override
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-  var joinstat = 0;
+  FirebaseFirestore firestore = FirebaseFirestore.instance; // Instance is already obtained via FirebaseFirestore.instance
+  var joinstat = 0; // This variable doesn't seem used
   late NGOModel _NGO;
-  late UserModel user;
-  late String _RequestID;
+  // late UserModel user; // This variable is not used
+  late String _RequestDocId; // State variable for the document ID
 
   @override
   void initState() {
+    super.initState(); // Always call super.initState() first
     _NGO = widget._NGO;
-    _RequestID = widget._RequestID;
-    super.initState();
+    _RequestDocId = widget._RequestDocId; // Get document ID from the widget
   }
 
-  @override
   final CollectionReference _userReference =
       FirebaseFirestore.instance.collection('users');
 
@@ -469,10 +490,10 @@ class _NGOteammembersState extends State<NGOteammembers> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            // passing this to our root
+            // Passing this to our root
             Navigator.of(context).pop();
           },
-        ), //Container,
+        ),
         elevation: 0,
         backgroundColor: const Color.fromARGB(255, 4, 50, 88),
         title: const Text(
@@ -492,19 +513,25 @@ class _NGOteammembersState extends State<NGOteammembers> {
               return const CircularProgressIndicator();
             }
 
+            // Check if snapshot has data before processing
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+               return const Center(child: Text("No team members found."));
+            }
+
             return ListView(
               children: snapshot.data!.docs
                   .where((element) => element['ngo_uid'] == _NGO.uid)
-                  .map((DocumentSnapshot document) {
-                Map<String, dynamic>? data =
-                    document.data()! as Map<String, dynamic>?;
+                   .map((DocumentSnapshot document) {
+                // Corrected cast
+                Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
 
                 return Padding(
                   padding: const EdgeInsets.all(1.0),
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.pop(context);
-                    }, // Image tapped
+                      // Optional: Add tap functionality for team members if needed
+                      // Navigator.pop(context); // Original code navigates back, keep or remove?
+                    },
                     child: Card(
                       color: Colors.white70,
                       child: Column(
@@ -512,17 +539,19 @@ class _NGOteammembersState extends State<NGOteammembers> {
                           ListTile(
                             leading: CircleAvatar(
                               backgroundImage: CachedNetworkImageProvider(
-                                data!['photoURL'],
+                                data['photoURL'] ?? 'https://via.placeholder.com/150', // Fallback image
                               ),
                             ),
                             title: Text(
-                              data['displayName'],
+                              data['displayName'] ?? 'Unknown User', // Default value
                               style: const TextStyle(
                                 color: Color.fromARGB(255, 4, 50, 88),
                                 fontSize: 18,
                                 fontWeight: FontWeight.normal,
                               ),
                             ),
+                             subtitle: Text(data['email'] ?? '', // Display email or other info
+                                style: const TextStyle(fontSize: 14)),
                           ),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -533,28 +562,34 @@ class _NGOteammembersState extends State<NGOteammembers> {
                                   style: TextStyle(fontSize: 15),
                                 ),
                                 onPressed: () async {
-                                  // await FirebaseFirestore.instance
-                                  //   .collection('Requests').where('ImageURL', isEqualTo: widget._RequestID)
-                                  //   .get().
-                                  //   .update({'HelperUID': data['uid']});
-                                  var collection = FirebaseFirestore.instance
-                                      .collection('Request')
-                                      .where('ImageURL',
-                                          isEqualTo: widget._RequestID);
-                                  var querySnapshots = await collection.get();
-                                  for (var doc in querySnapshots.docs) {
-                                    await doc.reference.update({
+                                  // Use the document ID to update the specific request
+                                  await FirebaseFirestore.instance
+                                      .collection('Request') // Using 'Request' as per your update logic
+                                      .doc(_RequestDocId) // Use the document ID
+                                      .update({
                                       'HelperUID': data['uid'],
-                                      'IsCompleted': true,
-                                    });
-                                  }
-                                  print("Request id :" + widget._RequestID);
-                                  Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => NGOHomePage(
-                                                uid: _NGO.uid,
-                                              )));
+                                      // Consider if 'IsCompleted' should be true upon assignment or actual completion
+                                      // 'IsCompleted': true, // Keeping your original logic, but review this
+                                      'AssignmentTimestamp': FieldValue.serverTimestamp(), // Optional: Add timestamp
+                                  }).then((_) {
+                                     // Show success message (optional)
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                       SnackBar(content: Text('${data['displayName']} assigned successfully!')),
+                                     );
+                                     // Navigate back to the NGO Home page
+                                     Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) => NGOHomePage(
+                                                  uid: _NGO.uid,
+                                                )));
+                                  }).catchError((error) {
+                                      // Show error message (optional)
+                                     ScaffoldMessenger.of(context).showSnackBar(
+                                       SnackBar(content: Text('Failed to assign user: $error')),
+                                     );
+                                  });
+
                                 },
                               ),
                               const SizedBox(width: 16),

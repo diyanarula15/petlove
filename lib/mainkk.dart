@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_unnecessary_containers, deprecated_member_use, unnecessary_new
+//mainkk.dart
 
 import 'dart:io';
 

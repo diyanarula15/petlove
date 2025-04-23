@@ -5,7 +5,7 @@ import 'package:petlove/models/User_model.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// REMOVED: import 'package:fluttertoast/fluttertoast.dart';
 import 'package:path/path.dart' as Path;
 import 'package:image_picker/image_picker.dart';
 import 'package:petlove/widgets/button_widget.dart';
@@ -236,7 +236,18 @@ class _updateProfileState extends State<updateProfile> {
       'displayName': user.displayName,
       'photoURL': user.photoURL,
     });
-    Fluttertoast.showToast(msg: "Details Updated Successfully :) ");
+
+    // Replaced Fluttertoast.showToast with SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Details Updated Successfully :) "),
+        duration: Duration(seconds: 2), // Adjust duration as needed
+      ),
+    );
+
+    // Use a small delay before navigating if you want the SnackBar to be visible for a moment
+    // await Future.delayed(const Duration(seconds: 2));
+
 
     Navigator.pushAndRemoveUntil(
         context,
@@ -246,6 +257,7 @@ class _updateProfileState extends State<updateProfile> {
 
   void Update(UserModel user) async {
     if (_formKey.currentState!.validate()) {
+      // context is available here in the State class
       updateDetails(user);
     }
   }
