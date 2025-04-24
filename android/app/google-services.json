@@ -1,55 +1,63 @@
 {
-    "project_info": {
-      "project_number": "309924366211",
-      "project_id": "petlove-78e5a",
-      "storage_bucket": "petlove-78e5a.appspot.com"
-    },
-    "client": [
-      {
-        "client_info": {
-          "mobilesdk_app_id": "1:309924366211:android:7f825e846fcb20fec618b6",
-          "android_client_info": {
-            "package_name": "com.example.petlove"
+  "project_info": {
+    "project_number": "309924366211",
+    "project_id": "petlove-78e5a",
+    "storage_bucket": "petlove-78e5a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:309924366211:android:7f825e846fcb20fec618b6",
+        "android_client_info": {
+          "package_name": "com.example.petlove"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "309924366211-bmkmahabbinvmf47vgv8vgsumi6975tk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.petlove",
+            "certificate_hash": "6fee6f0b362186d3cd5d2aedd4d97b4aaa47d638"
           }
         },
-        "oauth_client": [
-          {
-            "client_id": "309924366211-98jero4pvr62s4gqic7mmn0udgnsr99q.apps.googleusercontent.com",
-            "client_type": 1,
-            "android_info": {
-              "package_name": "com.example.petlove",
-              "certificate_hash": "6fee6f0b362186d3cd5d2aedd4d97b4aaa47d638"
+        {
+          "client_id": "309924366211-bpfjt80kcb2crnlivmam0ag1qbfj3qe7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.petlove",
+            "certificate_hash": "dbeacaa8a094a3c88445907b69f8d79eacd6aad0"
+          }
+        },
+        {
+          "client_id": "309924366211-v0uf6q3o3g6n2gail3cj1l26gfogm4ta.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.petlove",
+            "certificate_hash": "45a8461cddaabf2327cbaa808ccfd45b7e05502a"
+          }
+        },
+        {
+          "client_id": "309924366211-6hunihbaa2t7dfpa2p9shqs7nobtsufc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATYG82bo9NXTHkmUyqXVGU1xM_8ZwHGo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "309924366211-6hunihbaa2t7dfpa2p9shqs7nobtsufc.apps.googleusercontent.com",
+              "client_type": 3
             }
-          },
-          {
-            "client_id": "309924366211-mj97pful5tqpe2kkqjn71604i01qqk0o.apps.googleusercontent.com",
-            "client_type": 1,
-            "android_info": {
-              "package_name": "com.example.petlove",
-              "certificate_hash": "45a8461cddaabf2327cbaa808ccfd45b7e05502a"
-            }
-          },
-          {
-            "client_id": "309924366211-6hunihbaa2t7dfpa2p9shqs7nobtsufc.apps.googleusercontent.com",
-            "client_type": 3
-          }
-        ],
-        "api_key": [
-          {
-            "current_key": "AIzaSyATYG82bo9NXTHkmUyqXVGU1xM_8ZwHGo0"
-          }
-        ],
-        "services": {
-          "appinvite_service": {
-            "other_platform_oauth_client": [
-              {
-                "client_id": "309924366211-6hunihbaa2t7dfpa2p9shqs7nobtsufc.apps.googleusercontent.com",
-                "client_type": 3
-              }
-            ]
-          }
+          ]
         }
       }
-    ],
-    "configuration_version": "1"
+    }
+  ],
+  "configuration_version": "1"
 }
